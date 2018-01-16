@@ -1,0 +1,1 @@
+This is a Twitter bot that will upload the front page of The New York Times (New York Edition) everyday.  This project has no affiliation with The New York Times Company.
