@@ -49,6 +49,9 @@ function downloadFrontPage() {
                 reject(err);
             });
         });
+    }
+
+function appendPhoto() {
     
 }
 
@@ -64,11 +67,11 @@ function downloadFrontPage() {
 // }
 
 downloadFrontPage().then((result) => {
-    console.log("Downloaded front page");
+    console.log("Front page downloaded");
     })
     .catch((err) => {
         console.log(err);
-        console.log("I erred");
+        console.error("Error downloading front page");
     })
 
 // download('https://static01.nyt.com/images/2018/02/09/nytfrontpage/scan.pdf', 'dist').then(() => {
