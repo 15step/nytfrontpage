@@ -2,8 +2,14 @@ const fs = require('fs');
 const Twitter = require('twitter');
 const download = require('download');
 const schedule = require('node-schedule');
+const AWS = require('aws-sdk');
 require('dotenv').config();
 
+AWS.config.update({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+    region: process.env.AWS_REGION
+});
 
 const client = new Twitter({
     consumer_key: process.env.TWITTER_API_KEY,
@@ -17,6 +23,20 @@ let params = {screenName: 'nodejs'};
 // schedule.scheduledJobs('0 0 * * *', () => {
 //     //post tweet everyday at midnight
 // });
+
+function saveImage(data) {
+        let s3 = new AWS.S3();
+        let base64data = new Buffer(data, 'binary');
+        let bucket = 'nytimes-thumbnails';
+        s3.putObject({
+            Bucket: bucket,
+            Key: 'nytimes3.pdf',
+            Body: base64data,
+        }, (res) => {
+            console.log(res);
+            console.log('Successfully uploaded thing');
+        });
+}
 
 function getFrontPageUrl() {
     let url = 'https://static01.nyt.com/images/';
@@ -36,14 +56,10 @@ function getFrontPageUrl() {
 
 function downloadFrontPage() {
     let url = getFrontPageUrl();
-    let dir = './dist';
     return new Promise((resolve, reject) => {
-        if(!fs.existsSync(dir)) {
-            fs.mkdirSync(dir);
-        }
         download(url).then(data => {
-                fs.writeFileSync('dist/mynytimes.pdf', data);
-                resolve(data);
+            saveImage(data);
+            resolve(data);
             })
             .catch(err => {
                 reject(err);
@@ -54,6 +70,8 @@ function downloadFrontPage() {
 function appendPhoto() {
     
 }
+
+// saveImage();
 
 // function postTweet() {
 //     client.post('/statuses/update', {status: 'This is a test...'}, (err, tweet, res) => {

@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "async": "^2.6.0",
+    "aws-sdk": "^2.199.0",
     "dotenv": "^5.0.0",
     "download": "^6.2.5",
     "gm": "^1.23.1",
