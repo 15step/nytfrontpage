@@ -28,13 +28,14 @@ function saveImage(data) {
         let s3 = new AWS.S3();
         let base64data = new Buffer(data, 'binary');
         let bucket = 'nytimes-thumbnails';
+        let title = generateFileName();
         s3.putObject({
             Bucket: bucket,
-            Key: 'nytimes3.pdf',
+            Key: title,
             Body: base64data,
         }, (res) => {
             console.log(res);
-            console.log('Successfully uploaded thing');
+            console.log(`Successfully uploaded front page ${title}`);
         });
 }
 
@@ -67,9 +68,35 @@ function downloadFrontPage() {
         });
     }
 
+function removeTempPDF() {
+    let s3 = new AWS.S3();
+    let title = generateFileName();
+    let bucket = 'nytimes-thumbnails';
+    
+    s3.deleteObject({
+        Bucket: bucket,
+        Key: title,
+    }, (err, data) => {
+        if(!err) {
+            console.log(`Successfully removed temporary PDF for: ${title}`);
+        }
+    });
+}
+
 function appendPhoto() {
     
 }
+
+function generateFileName() {
+    let date = new Date()
+    let day = ('0' + date.getDate()).slice(-2);
+    let month = ('0' + (date.getMonth() + 1)).slice(-2);
+    let year = date.getFullYear();
+    let title = `nytimes-${day}-${month}-${year}.pdf`;
+  
+    return title;
+}
+  
 
 // saveImage();
 

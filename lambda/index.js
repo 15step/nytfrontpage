@@ -18,6 +18,17 @@ var utils = {
 
 var s3 = new AWS.S3();
 
+function generateFileName() {
+  let date = new Date()
+  let day = ('0' + date.getDate()).slice(-2);
+  let month = ('0' + (date.getMonth() + 1)).slice(-2);
+  let year = date.getFullYear();
+  let title = `nytimes-${day}-${month}-${year}.pdf`;
+
+  return title;
+}
+
+
 
 exports.handler = function(event, context) {
   var bucket = event.Records[0].s3.bucket.name,
@@ -100,8 +111,21 @@ exports.handler = function(event, context) {
             thumbnail: 'TRUE'
           }
         }, next);
-      }
-
+      },
+      function removeTempPDF() {
+        let s3 = new AWS.S3();
+        let title = generateFileName();
+        let bucket = 'nytimes-thumbnails';
+        
+        s3.deleteObject({
+            Bucket: bucket,
+            Key: title,
+        }, (err, data) => {
+            if(!err) {
+                console.log(`Successfully removed temporary PDF for: ${title}`);
+            }
+        });
+    }
       ],
       function(err) {
         if (err) {
