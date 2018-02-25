@@ -43,7 +43,7 @@ function getFrontPageUrl() {
     let url = 'https://static01.nyt.com/images/';
     try {
         let date = new Date();
-        let day = ('0' + date.getDate()).slice(-2);
+        let day = ('0' + (date.getDate() - 1)).slice(-2);
         let month = ('0' + (date.getMonth() + 1)).slice(-2);
         let year = date.getFullYear();
         url += `${year}/${month}/${day}/nytfrontpage/scan.pdf`;    
@@ -60,6 +60,8 @@ function downloadFrontPage() {
     return new Promise((resolve, reject) => {
         download(url).then(data => {
             saveImage(data);
+            let frontPage = appendPhoto();
+            postTweet(frontPage);
             resolve(data);
             })
             .catch(err => {
@@ -68,28 +70,28 @@ function downloadFrontPage() {
         });
     }
 
-function removeTempPDF() {
-    let s3 = new AWS.S3();
-    let title = generateFileName();
-    let bucket = 'nytimes-thumbnails';
-    
-    s3.deleteObject({
-        Bucket: bucket,
-        Key: title,
-    }, (err, data) => {
-        if(!err) {
-            console.log(`Successfully removed temporary PDF for: ${title}`);
-        }
-    });
-}
 
 function appendPhoto() {
+    let fileName = generateFileName();
+    let bucket = 'nytimes-thumbnails';
+    let s3 = new AWS.S3();
+    s3.getObject({
+        Bucket: bucket,
+        Key: fileName
+    }, (err, data) => {
+        if(err) {
+            console.log(err);
+            return;
+        }
+        return data;
+    });
+
     
 }
 
 function generateFileName() {
     let date = new Date()
-    let day = ('0' + date.getDate()).slice(-2);
+    let day = ('0' + (date.getDate()-1)).slice(-2);
     let month = ('0' + (date.getMonth() + 1)).slice(-2);
     let year = date.getFullYear();
     let title = `nytimes-${day}-${month}-${year}.pdf`;
@@ -100,16 +102,26 @@ function generateFileName() {
 
 // saveImage();
 
-// function postTweet() {
-//     client.post('/statuses/update', {status: 'This is a test...'}, (err, tweet, res) => {
-//         if(err) {
-//             console.log(err);
-//             throw err;
-//         }
-//         console.log('tweeted this:')
-//         console.log(tweet);
-//     });    
-// }
+function postTweet(page) {
+
+    client.post('media/upload', {media: page}, (err, media, res) => {
+        if(!err) {
+            let status = {
+                status: 'This is a tweet',
+                media_ids: media.media.media_id_string
+            };
+
+            client.post('/statuses/update', status, (err, tweet, res) => {
+                if(err) {
+                    console.log(err);
+                    throw err;
+                }   
+                console.log('tweeted this:')
+                console.log(tweet);
+            });
+        }
+    });  
+}
 
 downloadFrontPage().then((result) => {
     console.log("Front page downloaded");
