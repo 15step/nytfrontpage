@@ -25,6 +25,7 @@ let params = {screenName: 'nodejs'};
 // });
 
 function saveImage(data) {
+    return new Promise((resolve, reject) => {
         let s3 = new AWS.S3();
         let base64data = new Buffer(data, 'binary');
         let bucket = 'nytimes-thumbnails';
@@ -33,17 +34,22 @@ function saveImage(data) {
             Bucket: bucket,
             Key: title,
             Body: base64data,
-        }, (res) => {
-            console.log(res);
+        }, (err, data) => {
+            if(err) {
+                reject(err);
+            }
+            resolve(data);
             console.log(`Successfully uploaded front page ${title}`);
-        });
+        });     
+    });
+
 }
 
 function getFrontPageUrl() {
     let url = 'https://static01.nyt.com/images/';
     try {
         let date = new Date();
-        let day = ('0' + (date.getDate() - 1)).slice(-2);
+        let day = ('0' + date.getDate()).slice(-2);
         let month = ('0' + (date.getMonth() + 1)).slice(-2);
         let year = date.getFullYear();
         url += `${year}/${month}/${day}/nytfrontpage/scan.pdf`;    
@@ -59,12 +65,13 @@ function downloadFrontPage() {
     let url = getFrontPageUrl();
     return new Promise((resolve, reject) => {
         download(url).then(data => {
-            saveImage(data);
-            let frontPage = appendPhoto();
-            postTweet(frontPage);
-            resolve(data);
-            })
-            .catch(err => {
+            saveImage(data).then((data) =>{
+                let frontPage = appendPhoto();
+                postTweet(frontPage);
+                resolve(data);    
+            });
+        })
+        .catch(err => {
                 reject(err);
             });
         });
@@ -84,14 +91,12 @@ function appendPhoto() {
             return;
         }
         return data;
-    });
-
-    
+    });   
 }
 
 function generateFileName() {
     let date = new Date()
-    let day = ('0' + (date.getDate()-1)).slice(-2);
+    let day = ('0' + date.getDate()).slice(-2);
     let month = ('0' + (date.getMonth() + 1)).slice(-2);
     let year = date.getFullYear();
     let title = `nytimes-${day}-${month}-${year}.pdf`;
@@ -100,18 +105,18 @@ function generateFileName() {
 }
   
 
-// saveImage();
 
 function postTweet(page) {
-
+    console.log("entered post tweet");
     client.post('media/upload', {media: page}, (err, media, res) => {
         if(!err) {
             let status = {
                 status: 'This is a tweet',
                 media_ids: media.media.media_id_string
             };
-
+            console.log("posting tweet post tweet");
             client.post('/statuses/update', status, (err, tweet, res) => {
+                
                 if(err) {
                     console.log(err);
                     throw err;
