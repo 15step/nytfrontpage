@@ -18,19 +18,30 @@ var utils = {
 };
 
 AWS.config.update({
-    accessKeyId: 'ID',
-    secretAccessKey: 'KEY',
-    region: 'REGION'
+    accessKeyId: '###',
+    secretAccessKey: '###',
+    region: 'us-east-1'
 });
 
 const client = new Twitter({
-    consumer_key: 'KEY',
-    consumer_secret: 'SECRET',
-    access_token_key: 'ACCESS_KEY',
-    access_token_secret: 'ACCESS_SECRET'
+    consumer_key: '###',
+    consumer_secret: '###',
+    access_token_key: '###',
+    access_token_secret: '###'
 });
 
 var s3 = new AWS.S3();
+
+function getTweetText() {
+  let date = new Date();
+  let locale = "en-us";
+  let day = ('0' + date.getDate()).slice(-2);
+  let month = date.toLocaleString(locale, {month: "long"});
+  let year = date.getFullYear();
+  let title = `${month} ${day}, ${year}`;
+
+  return title
+}
 
 function generateFileName() {
   let date = new Date()
@@ -57,7 +68,7 @@ function getFrontPageUrl() {
     }
     return url;
 }
-
+  
 exports.handler = function(event, context) {
   var bucket = event.Records[0].s3.bucket.name,
   srcKey = utils.decodeKey(event.Records[0].s3.object.key),
@@ -80,16 +91,17 @@ exports.handler = function(event, context) {
     return;
   }
 
+
   async.waterfall([
     function download(next) {
-        //Download the image from S3
-        s3.getObject({
-          Bucket: bucket,
-          Key: srcKey
-        }, next);
-      },
-
-      function createThumbnail(response, next) {
+      //Download the image from S3
+      s3.getObject({
+        Bucket: bucket,
+        Key: srcKey
+      }, next);
+    },
+    
+    function createThumbnail(response, next) {
         var temp_file, image;
 
         if(fileType === "pdf") {
@@ -169,7 +181,7 @@ exports.handler = function(event, context) {
             }
             console.log(media)
             let status = {
-              status: 'This is a tweet',
+              status: getTweetText(),
               media_ids: media.media_id_string
             };
             client.post('/statuses/update', status, (err, tweet, res) => {  
@@ -198,3 +210,4 @@ exports.handler = function(event, context) {
         context.done();
       });
 };
+
