@@ -1,12 +1,14 @@
 var async = require("async");
-var AWS = require("aws-sdk");
 var gm = require("gm").subClass({imageMagick: true});
 var fs = require("fs");
 var mktemp = require("mktemp");
+const AWS = require('aws-sdk');
+const Twitter = require('twitter');
+
 
 var THUMB_KEY_PREFIX = "thumbnails/",
-    THUMB_WIDTH = 150,
-    THUMB_HEIGHT = 150,
+    THUMB_WIDTH = 512,
+    THUMB_HEIGHT = 1024,
     ALLOWED_FILETYPES = ['png', 'jpg', 'jpeg', 'bmp', 'tiff', 'pdf', 'gif'];
 
 var utils = {
@@ -15,6 +17,18 @@ var utils = {
   }
 };
 
+AWS.config.update({
+    accessKeyId: 'ID',
+    secretAccessKey: 'KEY',
+    region: 'REGION'
+});
+
+const client = new Twitter({
+    consumer_key: 'KEY',
+    consumer_secret: 'SECRET',
+    access_token_key: 'ACCESS_KEY',
+    access_token_secret: 'ACCESS_SECRET'
+});
 
 var s3 = new AWS.S3();
 
@@ -28,7 +42,21 @@ function generateFileName() {
   return title;
 }
 
-
+function getFrontPageUrl() {
+    let url = 'https://static01.nyt.com/images/';
+    try {
+        let date = new Date();
+        let day = ('0' + date.getDate()).slice(-2);
+        let month = ('0' + (date.getMonth() + 1)).slice(-2);
+        let year = date.getFullYear();
+        url += `${year}/${month}/${day}/nytfrontpage/scan.pdf`;    
+    } catch(e) {
+        console.log("Error creating url");
+        url = null;
+        throw e;
+    }
+    return url;
+}
 
 exports.handler = function(event, context) {
   var bucket = event.Records[0].s3.bucket.name,
@@ -53,7 +81,6 @@ exports.handler = function(event, context) {
   }
 
   async.waterfall([
-
     function download(next) {
         //Download the image from S3
         s3.getObject({
@@ -80,11 +107,12 @@ exports.handler = function(event, context) {
 
         image.size(function(err, size) {
           console.log('resizing image');
-          var scalingFactor = Math.min(THUMB_WIDTH / size.width, THUMB_HEIGHT / size.height),
-          width = scalingFactor * size.width,
-          height = scalingFactor * size.height;
+          // var scalingFactor = Math.min(THUMB_WIDTH / size.width, THUMB_HEIGHT / size.height),
+          // width = scalingFactor * size.width,
+          // height = scalingFactor * size.height;
 
-          this.resize(width, height)
+          // this.resize(width, height)
+          this.resize(THUMB_WIDTH, THUMB_HEIGHT)
           .toBuffer("png", function(err, buffer) {
             if(temp_file) {
               fs.unlinkSync(temp_file);
@@ -112,22 +140,52 @@ exports.handler = function(event, context) {
           }
         }, next);
       },
-      function removeTempPDF() {
+      
+      function removeTempPDFAndTweet(next) {
         let s3 = new AWS.S3();
         let title = generateFileName();
         let bucket = 'nytimes-thumbnails';
-        
+        console.log("Removing temporary pdf");
         s3.deleteObject({
             Bucket: bucket,
             Key: title,
         }, (err, data) => {
-            if(!err) {
-                console.log(`Successfully removed temporary PDF for: ${title}`);
+          if(err) {
+            console.log(err);
+          }
+          console.log(`Successfully removed temporary PDF for: ${title}`);
+          s3.getObject({
+            Bucket: bucket,
+            Key: dstKey
+          }, (err, data) => {
+            if(err) {
+              console.log(err);
             }
-        });
-    }
-      ],
-      function(err) {
+            console.log(data);
+          client.post('media/upload', {media: data.Body}, (err, media, res) => {
+            if(err) {
+              console.log(err);
+              return;
+            }
+            console.log(media)
+            let status = {
+              status: 'This is a tweet',
+              media_ids: media.media_id_string
+            };
+            client.post('/statuses/update', status, (err, tweet, res) => {  
+              if(err) {
+                console.log(err);
+                throw err;
+              }   
+              console.log('tweeted this:')
+              console.log(tweet);
+            });
+          });
+      });
+    })
+  }
+  ],
+    function(err) {
         if (err) {
           console.error(
             "Unable to generate thumbnail for '" + bucket + "/" + srcKey + "'" +
