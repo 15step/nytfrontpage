@@ -194,8 +194,20 @@ exports.handler = function(event, context) {
             });
           });
       });
-    })
-  }
+    });
+      //delete temporary image file
+      s3.deleteObject({
+        Bucket: bucket,
+        Key: dstKey,
+    }, (err, data) => {
+      if(err) {
+        console.log(err);
+        throw err;
+      }
+      console.log("Removed tempory image file");
+      console.log(dstKey);
+      });
+    }
   ],
     function(err) {
         if (err) {
