@@ -49,7 +49,7 @@ function getFrontPageUrl() {
     let url = 'https://static01.nyt.com/images/';
     try {
         let date = new Date();
-        let day = ('0' + (date.getDate()-1)).slice(-2);
+        let day = ('0' + date.getDate()).slice(-2);
         let month = ('0' + (date.getMonth() + 1)).slice(-2);
         let year = date.getFullYear();
         url += `${year}/${month}/${day}/nytfrontpage/scan.pdf`;    
@@ -140,6 +140,3 @@ downloadFrontPage().then((data) => {
         console.error("Error downloading front page");
     });
 
-// download('https://static01.nyt.com/images/2018/02/09/nytfrontpage/scan.pdf', 'dist').then(() => {
-//     console.log('done');
-// }); 
