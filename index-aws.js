@@ -4,7 +4,7 @@ const AWS = require('aws-sdk');
 
 function generateFileName() {
     let date = new Date()
-    let day = ('0' + (date.getDate()-1)).slice(-2);
+    let day = ('0' + date.getDate()).slice(-2);
     let month = ('0' + (date.getMonth() + 1)).slice(-2);
     let year = date.getFullYear();
     let title = `nytimes-${day}-${month}-${year}.pdf`;
@@ -16,7 +16,7 @@ function generateFileName() {
     let url = 'https://static01.nyt.com/images/';
     try {
         let date = new Date();
-        let day = ('0' + (date.getDate()-1)).slice(-2);
+        let day = ('0' + date.getDate()).slice(-2);
         let month = ('0' + (date.getMonth() + 1)).slice(-2);
         let year = date.getFullYear();
         url += `${year}/${month}/${day}/nytfrontpage/scan.pdf`;    
@@ -90,6 +90,9 @@ exports.handler = (event, context, callback) => {
     downloadFrontPage().then((data) => {
         console.log("Front page downloaded");
             saveImage(data).then((result) =>{
+                // let frontPage = appendPhoto();
+                // postTweet(frontPage);
+                // resolve(result);    
                 console.log('result');
                 console.log(result);
             });       
@@ -99,3 +102,4 @@ exports.handler = (event, context, callback) => {
             console.error("Error downloading front page");
         });    
 };
+
